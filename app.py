@@ -1,3 +1,5 @@
+import os
+import logging
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, Input, Output, State, callback
 import pandas as pd
@@ -6,18 +8,45 @@ import graph
 
 '''
 Requirements
+
+Save the following inside a directory (default = "./confs")
 -----------
+influxdb.conf
+  org = <org name>
+  host = <host url> 
+  database = <bucket name>
+  language = <for v3, it should be sql>
+  token = <influxDB token>
+
 sites.csv: site, lon, lat (for all sites)
 slice.csv: site, ip_address, node_name
-data.csv: (downloaded from InfluxDB) latency, received, receiver, sender, seq_n, DateTime
 
 '''
 
-############ Input data ##############
+logger = logging.getLogger()
+# Setting the threshold of logger to DEBUG
+logger.setLevel(logging.DEBUG)
+
+
+############ Config data paths and InfluxDB Version ##############
+
+# InfluxDB version
+influxdb_ver = 'v2'  # local ('v2') or cloud ('v3')
+
+# Set configs location
+#conf_files = './data_cloud'
+conf_files = './data_local'
+
+
+db_conf_path = os.path.join(conf_files, 'influxdb.conf') 
+sites_f_path  = os.path.join(conf_files, 'sites.csv')
+slice_f_path = os.path.join(conf_files, 'slice.csv')
 
 # Create one Dataframe with all the geo-location information
+sites_df = data_loader.get_geoloc_df(sites_f_path, slice_f_path)
 
-sites_df = data_loader.get_geoloc_df()
+
+logger.debug(sites_df)
 
 
 ############   Layout  #################
@@ -36,7 +65,7 @@ controls = dbc.Card(
                     options=[
                         {"label": i, "value": i} for i in sites_df['site'].tolist()
                     ],
-                    value="STAR",
+                    #value="STAR",
                 ),
             ],
             style={'marginBottom': 2, 
@@ -52,7 +81,7 @@ controls = dbc.Card(
                     options=[
                         {"label": i, "value": i} for i in sites_df['site'].tolist()
                     ],
-                    value="STAR",
+                    #value="STAR",
                 ),
             ],
             style={'marginBottom': 2, 
@@ -139,20 +168,51 @@ def update_figure(n, src, dst, duration):
     Returns 3  graph figures
     '''
     #### Line graphs #####
+
     src_ip = sites_df.loc[sites_df['site'].str.contains(src), 'ip_address'].item()
     dst_ip = sites_df.loc[sites_df['site'].str.contains(dst), 'ip_address'].item()
 
+    # debugging
+    logger.debug(src_ip, dst_ip)
 
-    latency_fwd = data_loader.download_influx_data(duration=duration, outfile=None,
-            src_dst=(src_ip, dst_ip))
-    line_fig_fwd = graph.generate_line_graph(src, dst, latency_fwd)
+    # Forward graph data
+    if influxdb_ver == 'v3':
+        latency_fwd = data_loader.download_influx_data(
+                            conf_path=db_conf_path, 
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(src_ip, dst_ip))
+    elif influxdb_ver == 'v2':
+        latency_fwd = data_loader.download_influx_data_local(
+                            conf_path=db_conf_path,
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(src_ip, dst_ip))
 
-    latency_rev = data_loader.download_influx_data(duration=duration, outfile=None,
-            src_dst=(dst_ip, src_ip))
-    line_fig_rev = graph.generate_line_graph(dst, src, latency_rev)
+    logger.debug(latency_fwd)
+    line_fig_fwd = graph.generate_line_graph(sites_df, src, dst, latency_fwd)
+
+    # Reverse graph data
+    if influxdb_ver == 'v3':
+        latency_rev = data_loader.download_influx_data(
+                            conf_path=db_conf_path, 
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(dst_ip, src_ip))
+
+    elif influxdb_ver == 'v2':
+        latency_rev = data_loader.download_influx_data_local(
+                            conf_path=db_conf_path,
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(dst_ip, src_ip))
+
+    logger.debug(latency_rev)
+    line_fig_rev = graph.generate_line_graph(sites_df, dst, src, latency_rev)
+
 
     #####  Map graph ######
-    map_fig = graph.generate_map(src, dst)
+    map_fig = graph.generate_map(sites_df, src, dst)
 
     return line_fig_fwd, line_fig_rev, map_fig
 
@@ -169,17 +229,40 @@ def download_fwd_data(n_clicks, src, dst, duration):
     src_ip = sites_df.loc[sites_df['site'].str.contains(src), 'ip_address'].item()
     dst_ip = sites_df.loc[sites_df['site'].str.contains(dst), 'ip_address'].item()
 
+    # Forward graph data
+    if influxdb_ver == 'v3':
+        latency_fwd = data_loader.download_influx_data(
+                            conf_path=db_conf_path, 
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(src_ip, dst_ip))
+    elif influxdb_ver == 'v2':
+        latency_fwd = data_loader.download_influx_data_local(
+                            conf_path=db_conf_path,
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(src_ip, dst_ip))
 
-    latency_fwd = data_loader.download_influx_data(duration=duration, outfile=None,
-            src_dst=(src_ip, dst_ip))
-    latency_rev = data_loader.download_influx_data(duration=duration, outfile=None,
-            src_dst=(dst_ip, src_ip))
+
+    # Reverse graph data
+    if influxdb_ver == 'v3':
+        latency_rev = data_loader.download_influx_data(
+                            conf_path=db_conf_path, 
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(dst_ip, src_ip))
+
+    elif influxdb_ver == 'v2':
+        latency_rev = data_loader.download_influx_data_local(
+                            conf_path=db_conf_path,
+                            duration=duration, 
+                            outfile=None,
+                            src_dst=(dst_ip, src_ip))
+
    
     latency_df = pd.concat([latency_fwd, latency_rev], ignore_index=True)
-
-    print(latency_df)
+    logger.debug(latency_df)
     
-
     return dcc.send_data_frame(latency_df.to_csv, "latency.csv", index=False)
     
 
