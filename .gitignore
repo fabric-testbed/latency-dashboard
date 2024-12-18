@@ -7,3 +7,5 @@ influxdb.conf*
 __pycache__/
 prior_experiments/
 **/*tests/
+influx_query_cloud.py
+influx_query_local.py
