@@ -30,7 +30,7 @@ conf_files = 'path/to/dir/for/required/files' # see below
 
 ```
 source .venv/bin/activate
-python app.py
+python app.py <path/to/config/files/dir>
 ```
 
 Then, connect to `http://127.0.0.1:8050/`
@@ -38,11 +38,11 @@ Then, connect to `http://127.0.0.1:8050/`
 
 ## Required Files
 
-Directory name can be something other than "data"
+Directory name can be something other than "confs"
 
-- `./data/sites.csv`: FABRIC sites latitudes and longitudes
-- `./data/slice.csv`: Information on the FABRIC slice used for this data collection
-- `./data/influxdb.conf`: For accessing InfluxDB.
+- `./confs/sites.csv`: FABRIC sites latitudes and longitudes
+- `./confs/slice.csv`: Information on the FABRIC slice used for this data collection
+- `./confs/influxdb.conf`: For accessing InfluxDB.
 
 
 ### influxDB config file format (`influxdb.conf`)

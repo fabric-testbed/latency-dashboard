@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, Input, Output, State, callback
@@ -7,8 +8,11 @@ import load_data as data_loader
 import graph
 
 '''
-Requirements
+Usage:
+python app.py <path/to/config/file/dir>
 
+
+Requirements:
 Save the following inside a directory (default = "./confs")
 -----------
 influxdb.conf
@@ -31,12 +35,17 @@ logger.setLevel(logging.DEBUG)
 ############ Config data paths and InfluxDB Version ##############
 
 # InfluxDB version
-influxdb_ver = 'v2'  # local ('v2') or cloud ('v3')
+influxdb_version = 'v2'  # local ('v2') or cloud ('v3')
 
 # Set configs location
 #conf_files = './data_cloud'
-conf_files = './data_local'
+#conf_files = './data_20250113'
 
+if len(sys.argv) == 1:
+    print("Usage: python app.py <path/to/config/file/dir>. \nExisting ...")
+    sys.exit()
+    
+conf_files = sys.argv[1]
 
 db_conf_path = os.path.join(conf_files, 'influxdb.conf') 
 sites_f_path  = os.path.join(conf_files, 'sites.csv')
@@ -176,13 +185,13 @@ def update_figure(n, src, dst, duration):
     logger.debug(src_ip, dst_ip)
 
     # Forward graph data
-    if influxdb_ver == 'v3':
+    if influxdb_version == 'v3':
         latency_fwd = data_loader.download_influx_data(
                             conf_path=db_conf_path, 
                             duration=duration, 
                             outfile=None,
                             src_dst=(src_ip, dst_ip))
-    elif influxdb_ver == 'v2':
+    elif influxdb_version == 'v2':
         latency_fwd = data_loader.download_influx_data_local(
                             conf_path=db_conf_path,
                             duration=duration, 
@@ -193,14 +202,14 @@ def update_figure(n, src, dst, duration):
     line_fig_fwd = graph.generate_line_graph(sites_df, src, dst, latency_fwd)
 
     # Reverse graph data
-    if influxdb_ver == 'v3':
+    if influxdb_version == 'v3':
         latency_rev = data_loader.download_influx_data(
                             conf_path=db_conf_path, 
                             duration=duration, 
                             outfile=None,
                             src_dst=(dst_ip, src_ip))
 
-    elif influxdb_ver == 'v2':
+    elif influxdb_version == 'v2':
         latency_rev = data_loader.download_influx_data_local(
                             conf_path=db_conf_path,
                             duration=duration, 
@@ -230,13 +239,13 @@ def download_fwd_data(n_clicks, src, dst, duration):
     dst_ip = sites_df.loc[sites_df['site'].str.contains(dst), 'ip_address'].item()
 
     # Forward graph data
-    if influxdb_ver == 'v3':
+    if influxdb_version == 'v3':
         latency_fwd = data_loader.download_influx_data(
                             conf_path=db_conf_path, 
                             duration=duration, 
                             outfile=None,
                             src_dst=(src_ip, dst_ip))
-    elif influxdb_ver == 'v2':
+    elif influxdb_version == 'v2':
         latency_fwd = data_loader.download_influx_data_local(
                             conf_path=db_conf_path,
                             duration=duration, 
@@ -245,14 +254,14 @@ def download_fwd_data(n_clicks, src, dst, duration):
 
 
     # Reverse graph data
-    if influxdb_ver == 'v3':
+    if influxdb_version == 'v3':
         latency_rev = data_loader.download_influx_data(
                             conf_path=db_conf_path, 
                             duration=duration, 
                             outfile=None,
                             src_dst=(dst_ip, src_ip))
 
-    elif influxdb_ver == 'v2':
+    elif influxdb_version == 'v2':
         latency_rev = data_loader.download_influx_data_local(
                             conf_path=db_conf_path,
                             duration=duration, 
